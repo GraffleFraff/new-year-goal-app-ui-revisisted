@@ -1,199 +1,79 @@
-import { Accordion, Card, Button } from "react-bootstrap";
-import React, { useState } from "react";
-import WeeklyJournalModal from "./WeeklyJournalModal";
+import React, { useState, useEffect } from "react";
+import { Button, Card } from "react-bootstrap";
+import WeekComponent from "./WeekComponent";
 
-import EditGoalModal from "./EditGoalModal";
-import DailyGoalsTable from "./DailyGoalsTableComponent";
+const ProgressComponent = () => {
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const [dateRange, setDateRange] = useState("");
+  const [weeklyGoals, setWeeklyGoals] = useState({});
 
-function ProgressComponent() {
-  const weeksInYear = 52;
-  const daysOfWeek = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+  useEffect(() => {
+    setDateRange(getDateRangeForWeek(currentWeek));
+  }, [currentWeek]);
 
-  const [goalNames, setGoalNames] = useState(
-    Array.from({ length: weeksInYear }, () => ({
-      goal1: { name: "Goal 1", frequency: 7 },
-      goal2: { name: "Goal 2", frequency: 7 },
-      goal3: { name: "Goal 3", frequency: 7 },
-    }))
-  );
+  function getDateRangeForWeek(weekNumber) {
+    const startDate = new Date("12/31/2023");
+    startDate.setDate(startDate.getDate() + (weekNumber - 1) * 7); // Adjust to the correct week
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6); // The end date of the week
 
-  const [showModal, setShowModal] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState(null);
-  const [activeKey, setActiveKey] = useState(null);
-  const [checkboxStates, setCheckboxStates] = useState(
-    Array.from({ length: weeksInYear }, () =>
-      Array.from({ length: daysOfWeek.length }, () => ({
-        goal1: false,
-        goal2: false,
-        goal3: false,
-      }))
-    )
-  );
-  const [selectedFrequency, setSelectedFrequency] = useState(7);
-  const [goalNameError, setGoalNameError] = useState(false);
+    return `${
+      startDate.getMonth() + 1
+    }/${startDate.getDate()}/${startDate.getFullYear()} - ${
+      endDate.getMonth() + 1
+    }/${endDate.getDate()}/${endDate.getFullYear()}`;
+  }
 
-  const handleJournalClick = (week) => {
-    setSelectedWeek(week);
-    setShowModal(true);
-  };
+  const handleNextWeek = () => {
+    const newWeek = currentWeek + 1;
+    setCurrentWeek(newWeek);
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-  };
-
-  const handleSubmit = () => {
-    console.log("Submit journal entries");
-    setShowModal(false);
-  };
-
-  const handlePencilClick = (weekIndex, goalKey) => {
-    setEditingGoal({ weekIndex, goalKey });
-    setNewGoalName("");
-    setShowEditGoalModal(true);
-  };
-
-  const handleCheckboxChange = (weekIndex, dayIndex, goal, value) => {
-    const updatedWeek = [...checkboxStates[weekIndex]];
-    updatedWeek[dayIndex] = { ...updatedWeek[dayIndex], [goal]: value };
-    const updatedStates = [...checkboxStates];
-    updatedStates[weekIndex] = updatedWeek;
-    setCheckboxStates(updatedStates);
-  };
-
-  const calculateProgress = (weekIndex, goalKey) => {
-    const goalFrequency = goalNames[weekIndex][goalKey].frequency;
-    const checkedCount = checkboxStates[weekIndex].filter(
-      (day) => day[goalKey]
-    ).length;
-    if (checkedCount === 0) return 0;
-    return Math.round((checkedCount / goalFrequency) * 100);
-  };
-
-  const [showEditGoalModal, setShowEditGoalModal] = useState(false);
-  const [editingGoal, setEditingGoal] = useState({
-    weekIndex: null,
-    goalKey: "",
-  });
-  const [newGoalName, setNewGoalName] = useState("");
-
-  const handleSubmitNewGoalName = () => {
-    // Check if the new goal name is empty or consists only of whitespaces
-    if (!newGoalName.trim()) {
-      setGoalNameError(true); // Show error
-      return; // Prevent further execution
+    // Check if the next week's goals are already initialized
+    if (!weeklyGoals[newWeek]) {
+      setWeeklyGoals((prevGoals) => ({
+        ...prevGoals,
+        // Copy goals from the current week, resetting their status
+        [newWeek]: prevGoals[currentWeek]
+          ? prevGoals[currentWeek].map((goal) => ({
+              ...goal,
+              status: "not started",
+            }))
+          : [],
+      }));
     }
-    setGoalNameError(false); // Reset error state on successful validation
-
-    // Proceed with updating the goal name assuming the structure is as previously discussed
-    const updatedGoalNames = [...goalNames];
-    const goalKeyFormatted = editingGoal.goalKey.replace(" ", "").toLowerCase();
-    updatedGoalNames[editingGoal.weekIndex] = {
-      ...updatedGoalNames[editingGoal.weekIndex],
-      [goalKeyFormatted]: {
-        name: newGoalName,
-        frequency: selectedFrequency,
-      },
-    };
-    setGoalNames(updatedGoalNames);
-    setShowEditGoalModal(false); // Close the modal upon successful submission
   };
 
-  // console.log("Checkbox States:", checkboxStates);
-
-  const renderDailyTable = (weekIndex) => (
-    <DailyGoalsTable
-      daysOfWeek={daysOfWeek}
-      checkboxStates={checkboxStates}
-      weekIndex={weekIndex}
-      goalNames={goalNames[weekIndex]}
-      handleCheckboxChange={handleCheckboxChange}
-      handlePencilClick={handlePencilClick}
-      calculateProgress={calculateProgress}
-    />
-  );
-
-  const calculateOverallProgress = (weekIndex) => {
-    const goals = ["goal1", "goal2", "goal3"]; // Adjust based on your goals
-    const progressSum = goals.reduce((sum, goalKey) => {
-      const progress = calculateProgress(weekIndex, goalKey);
-      return sum + progress;
-    }, 0);
-    const averageProgress = progressSum / goals.length;
-    return averageProgress.toFixed(2); // Rounds to 2 decimal places for display
+  const handlePreviousWeek = () => {
+    if (currentWeek > 1) {
+      setCurrentWeek(currentWeek - 1);
+    }
   };
 
   return (
-    <div>
-      <Accordion activeKey={activeKey}>
-        {Array.from({ length: weeksInYear }).map((_, i) => (
-          <Card key={i}>
-            <Accordion.Header
-              as={Card.Header}
-              eventKey={String(i)}
-              onClick={() =>
-                setActiveKey(activeKey === String(i) ? null : String(i))
-              }
-            >
-              <div>
-                Week {i + 1} -{" "}
-                <span
-                  style={{
-                    backgroundColor:
-                      calculateOverallProgress(i) < 50
-                        ? "red"
-                        : calculateOverallProgress(i) < 100
-                        ? "yellow"
-                        : "green",
-                    padding: "0.25em 0.5em",
-                    borderRadius: "0.25em",
-                  }}
-                >
-                  {calculateOverallProgress(i)}%
-                </span>
-              </div>
-            </Accordion.Header>
-            <Accordion.Collapse eventKey={String(i)}>
-              <Card.Body>
-                {renderDailyTable(i)}
-                <Button
-                  className="btn btn-primary"
-                  onClick={(e) => handleJournalClick(i + 1, e)}
-                  variant="secondary"
-                >
-                  End of Week Journal
-                </Button>
-              </Card.Body>
-            </Accordion.Collapse>
-          </Card>
-        ))}
-      </Accordion>
-      <WeeklyJournalModal
-        show={showModal}
-        selectedWeek={selectedWeek}
-        handleClose={handleCloseModal}
-        handleSubmit={handleSubmit}
-      />
-      <EditGoalModal
-        show={showEditGoalModal}
-        editingGoal={editingGoal}
-        newGoalName={newGoalName}
-        setNewGoalName={setNewGoalName}
-        selectedFrequency={selectedFrequency}
-        setSelectedFrequency={setSelectedFrequency}
-        goalNameError={goalNameError}
-        handleClose={() => setShowEditGoalModal(false)}
-        handleSubmit={handleSubmitNewGoalName}
-      />
-    </div>
+    <Card className="mb-3">
+      <Card.Header>
+        {" "}
+        <h2>Week {currentWeek}</h2>
+        <h3>{dateRange}</h3>
+        {currentWeek > 1 && (
+          <Button onClick={handlePreviousWeek} variant="link">
+            Previous Week
+          </Button>
+        )}
+        <Button onClick={handleNextWeek} variant="link">
+          Next Week
+        </Button>
+      </Card.Header>
+      <Card.Body>
+        <WeekComponent
+          goals={weeklyGoals[currentWeek] || []}
+          setGoals={(goals) =>
+            setWeeklyGoals({ ...weeklyGoals, [currentWeek]: goals })
+          }
+        />
+      </Card.Body>
+    </Card>
   );
-}
+};
 
 export default ProgressComponent;

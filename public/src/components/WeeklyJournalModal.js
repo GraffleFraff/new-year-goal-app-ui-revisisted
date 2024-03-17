@@ -1,11 +1,16 @@
 import React from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 
-const WeeklyJournalModal = ({ show, handleClose, handleSubmit }) => {
+const WeeklyJournalModal = ({
+  show,
+  selectedWeek,
+  handleClose,
+  handleSubmit,
+}) => {
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
-        <Modal.Title>Weekly Journal</Modal.Title>
+        <Modal.Title>Week {selectedWeek} Journal</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form>
